@@ -13,6 +13,7 @@ class Formatter:
 	shift_line = ""
 	indent = 0
 	indent_const = "    "	#config
+	max_line_length_const = 80 #config
 
 	def __init__(self, filename):
 		#config
@@ -86,7 +87,7 @@ class Formatter:
 			if '}' in line:
 				identation -= 1
 
-			fixed_list.append(identation * self.indent_const + line)
+			fixed_list.append(identation * self.indent_const + line.strip())
 
 			if '{' in line:
 				identation += 1
@@ -95,6 +96,16 @@ class Formatter:
 
 	#def handle_spaces_surrounded(self, line):
 
+	def handle_space_constructs(self, line):
+		line = line.replace(r'=', r' = ')
+		line = line.replace(r'>', r' > ')
+		line = line.replace(r'<', r' < ')
+		line = line.replace(r':', r' : ')
+		line = line.replace(r'+', r' + ')
+		line = line.replace(r'-', r' - ')
+		line = line.replace(r'*', r' * ')
+		line = line.replace(r'/', r' / ')
+		return line
 
 	def handle_spaces(self, line):
 		while re.search(r'\s\)', line) is not None:
@@ -105,8 +116,28 @@ class Formatter:
 			line = line.replace(' ]',']')
 		while re.search(r'\[\s', line) is not None:
 			line = line.replace('[ ','[')
-		
+		line = line.replace('{', ' {')
+		if r'\\ ' not in line: 
+			line = line.replace(r'\\',r'\\ ')
+		line = line.replace(r'= =',r'==')
+		line = line.replace(r'> =',r'>=')
+		line = line.replace(r'< =',r'<=')
+		line = line.replace(r'>:', r'> :')
+		line = line.replace(r'):', r') :')
+		line = line.replace(r'object:', r'object :')
+		line = line.replace(r'- >', r'->')
 		return line
+
+	def handle_colon(self, line):
+		finded_braces = re.findall(r'\([^\)]+\)', line)
+		print(finded_braces)
+		if finded_braces is not None:
+			for generics in finded_braces:
+				old_generics = generics
+				if ':' in generics:
+					generics = generics.replace(' :', ':')
+					line = line.replace(old_generics, generics)
+		return line			
 
 	def handle_for(self, line):
 		while re.search(r'^\sfor', line) is not None:
@@ -122,14 +153,33 @@ class Formatter:
 			line = line.replace('if(', 'if (')
 		return line
 
+	def handle_generics(self, line):
+		finded_generics = re.findall(r'<[^>]+>', line)
+		if finded_generics is not None:
+			for generics in finded_generics:
+				old_generics = generics	
+				if '||' not in generics and '&&' not in generics:
+					generics = generics.replace('< ', '<')
+					generics = generics.replace(' >', '>')
+					line = line.replace(old_generics, generics)
+					line = line.replace(' ' + generics, generics)
+					line = line.replace(generics + ' ', generics) 
+		return line
+
 	def format_file(self):
 		self.iter_input = iter(self.next_input())
 		for line in self.iter_input:
+			line = self.handle_space_constructs(line)
+			
 			line = ' '.join(line.split())
 
+			
 			line = self.handle_if(line)
 			line = self.handle_for(line)
+			line = self.handle_colon(line)
+			line = self.handle_generics(line)
 			line = self.handle_spaces(line)
+			
 
 			self.one_line_left_brace_hendler_list = list()
 			self.one_line_right_brace_hendler_list = list()
