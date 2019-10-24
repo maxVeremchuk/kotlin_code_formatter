@@ -94,6 +94,8 @@ class Formatter:
 			
 		return fixed_list
 
+	def handle_long_line(self, line):
+		
 	#def handle_spaces_surrounded(self, line):
 
 	def handle_space_constructs(self, line):
@@ -131,6 +133,14 @@ class Formatter:
 	def handle_colon(self, line):
 		finded_braces = re.findall(r'\([^\)]+\)', line)
 		print(finded_braces)
+		if finded_braces is not None:
+			for generics in finded_braces:
+				old_generics = generics
+				if ':' in generics:
+					generics = generics.replace(' :', ':')
+					line = line.replace(old_generics, generics)
+
+		finded_braces = re.findall(r'val\s.*:', line)
 		if finded_braces is not None:
 			for generics in finded_braces:
 				old_generics = generics
