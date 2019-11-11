@@ -20,3 +20,8 @@ private val defaultCharset : Charset? =EncodingRegistryefaultCharsetForPropertie
 if (!component.isSyncing && !hasAnyKotlinRuntimeInScope(module) || qwerty && ytrewq){}
 
 owner?.firstChild!!.siblings(forward = true).dropWhile.dropWhile.dropWhile { it is PsiComment || it is PsiWhiteSpace }
+
+qwertyuiopoiuytrewERTyui ->rtyukasknhbiasjjbjjsdsdjdssddsvbvdds
+
+fghj .kl
+while (((((({{a >= b}]}))))))

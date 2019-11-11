@@ -1,5 +1,4 @@
 import re
-from . import regex_consts
 
 class Formatter:
 
@@ -8,17 +7,14 @@ class Formatter:
 	one_line_left_brace_hendler_list = list()
 	one_line_right_brace_hendler_list = list()
 	iter_input = iter("")
-	current_line = ""
-	formatted_line = ""
-	shift_line = ""
-	indent = 0
 	indent_const = "    "	#config
 	max_line_length_const = 60 #config
 
-	def __init__(self, filename):
-		#config
-		f = open(filename, "r")
-		self.init_content = f.readlines()
+	def __init__(self, filename, indent_const, max_line_length_const):
+		with open(filename, "r") as file:
+			self.init_content = file.readlines()
+			
+
 
 	def next_input(self):
 		for line in self.init_content:
@@ -188,8 +184,12 @@ class Formatter:
 		line = line.replace(r'? .',r'?.')
 		line = line.replace(r'>:', r'> :')
 		line = line.replace(r'):', r') :')
+		line = line.replace(r': :', r'::')
 		line = line.replace(r'object:', r'object :')
 		line = line.replace(r'- >', r'->')
+		line = line.replace(r' ?', r'?')
+		line = line.replace(r'. ', r'.')
+		line = line.replace(r' .', r'.')
 		return line
 
 	def handle_colon(self, line):
@@ -208,6 +208,15 @@ class Formatter:
 				if ':' in generics:
 					generics = generics.replace(' :', ':')
 					line = line.replace(old_generics, generics)
+		# duplicate
+		finded_braces = re.findall(r'var\s.*:', line)
+		if finded_braces is not None:
+			for generics in finded_braces:
+				old_generics = generics
+				if ':' in generics:
+					generics = generics.replace(' :', ':')
+					line = line.replace(old_generics, generics)
+		# duplicate
 		return line			
 
 	def handle_for(self, line):
@@ -222,6 +231,20 @@ class Formatter:
 			line = line.replace('if', ' if')
 		while re.search(r'if\(', line) is not None:
 			line = line.replace('if(', 'if (')
+		return line
+
+	def handle_while(self, line):
+		while re.search(r'^\swhile', line) is not None:
+			line = line.replace('while', ' while')
+		while re.search(r'while\(', line) is not None:
+			line = line.replace('while(', 'while (')
+		return line
+
+	def handle_when(self, line):
+		while re.search(r'^\swhen', line) is not None:
+			line = line.replace('when', ' when')
+		while re.search(r'when\(', line) is not None:
+			line = line.replace('when(', 'when (')
 		return line
 
 	def handle_generics(self, line):
