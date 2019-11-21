@@ -1,8 +1,8 @@
 class Analyzer:
 	init_content = list()
 	bracket_stack = []
-	open_list = ["[","{","(","<"] 
-	close_list = ["]","}",")",">"] 
+	open_list = ["[","{","("] 
+	close_list = ["]","}",")"] 
 	last_bracket = []
 
 	def __init__(self, filename):
@@ -22,13 +22,16 @@ class Analyzer:
 					if ((len(self.bracket_stack) > 0) and (self.open_list[pos] == self.bracket_stack[-1])): 
 						self.bracket_stack.pop()
 					else:
-						print("Error in line {}, {}; Wrong bracket".format(i, j))
+						print("Error in line {}, {}; Wrong bracket".format(i + 1, j + 1))
 						print(line.rstrip())
 						print("~" * (j) + '^')
+						return False
 		if len(self.bracket_stack) > 0:
 			print("Error in line {}, {}; No closing bracket".format(self.last_bracket[0] + 1, self.last_bracket[1] + 1))
 			print(self.init_content[self.last_bracket[0]].rstrip())
 			print("~" * (self.last_bracket[1]) + '^')
+			return False
+		return True
 
 
 

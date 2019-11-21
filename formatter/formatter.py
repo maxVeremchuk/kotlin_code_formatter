@@ -7,8 +7,13 @@ class Formatter:
 	one_line_left_brace_hendler_list = list()
 	one_line_right_brace_hendler_list = list()
 	iter_input = iter("")
+	is_multiline_comment = False
 	indent_const = "    "	#config
 	max_line_length_const = 60 #config
+	space_positions = list()
+	multi_strings = list()
+	strings = list()
+	strings_indent = list()
 
 	def __init__(self, filename, indent_const, max_line_length_const):
 		with open(filename, "r") as file:
@@ -29,6 +34,28 @@ class Formatter:
 		self.one_line_left_brace_hendler_list.append(last)
 
 
+	def handle_multiline_comment(self, line):
+		line.replace(' *', '*')
+		line.replace('* ', '*')
+		if not self.is_multiline_comment and "/**" in line:
+			self.is_multiline_comment = True
+			print("inside", self.is_multiline_comment)
+			#line = line.strip()
+			return line#.replace("/ * *", "/**")
+		else:
+			if '*/' in line:
+				self.is_multiline_comment = False
+			else:
+				line = line.replace('*','* ')
+				#line = line.replace("* /", "*/").strip()
+				#self.space_positions.append(len(self.finished_content))
+				#line.replace('* ', '*')
+				#line.replace('*', '* ')	
+			# elif line.startswith("*"):
+			# 	line = "~~~space_in_start~~~" + line	
+			return line	
+		
+
 	def right_curly_brace_handler(self, line):
 		lines = line.split('}')
 		first = lines[0]
@@ -45,10 +72,15 @@ class Formatter:
 			if '}' in line:
 				identation -= 1
 
-			if len(line) > self.max_line_length_const:
+			if len(line) > self.max_line_length_const and not line.startswith("~"):
 				fixed_list.extend(self.handle_long_line(line, identation))
 			else:	
-				fixed_list.append(identation * self.indent_const + line.strip())
+				if line.startswith("*"):
+					fixed_list.append(identation * self.indent_const + " " + line.strip())
+				else:
+					if "~~~formatter_multi_string~~~" in line:
+						self.strings_indent.append(identation)
+					fixed_list.append(identation * self.indent_const + line.strip())
 
 			if '{' in line:
 				identation += 1
@@ -57,7 +89,11 @@ class Formatter:
 
 
 	def handle_long_line(self, line, identation):
+
 		finished_list = list()
+		if line.strip().startswith("import"):
+			finished_list.append(line)
+			return finished_list
 		if len(line) < self.max_line_length_const:
 			finished_list.append((self.indent_const * identation + line))
 			return finished_list
@@ -97,13 +133,12 @@ class Formatter:
 			temp_list[-1] = last[:rightest_brace_idnex]
 			temp_list.append(last[rightest_brace_idnex:])
 			finished_list.extend(temp_list)
-		elif " val " in line and "=" in line:
+		elif (" val " in line or " var " in line) and "=" in line:
 			bef_equal, after_equal = line.split('=', 1)
 			finished_list.append(bef_equal + '=')
 			finished_list.extend(self.handle_long_line(after_equal.strip(), identation + 1))
 		elif "." in line:
 			finished_list.extend(self.split_by_dot(line, identation + 1))
-			print(self.split_by_dot(line, identation + 1))
 		elif "," in line:
 			finished_list.extend(self.split_by_comma(der, identation + 1))
 		elif "->" in line:
@@ -121,10 +156,10 @@ class Formatter:
 		for i, dot_item in enumerate(sep_by_dot):
 			if i == 0:
 				continue
-			if sep_by_dot[i - 1][-1] == "?":
+			if len(sep_by_dot[i - 1]) > 0 and sep_by_dot[i - 1][-1] == "?":
 				finished_list[-1] = finished_list[-1][:-1]
 				finished_list.append(self.indent_const * identation + "?." + dot_item.strip())
-			else:
+			elif len(dot_item) > 0:
 				finished_list.append(self.indent_const * identation + "." + dot_item.strip())
 		return finished_list
 
@@ -152,7 +187,6 @@ class Formatter:
 			finished_list.append(self.indent_const * identation + comma_item.strip() + ',')
 		finished_list.append(self.indent_const * identation + last.strip())	
 		return finished_list
-	#def handle_spaces_surrounded(self, line):
 
 	def handle_space_constructs(self, line):
 		line = line.replace(r'=', r' = ')
@@ -190,6 +224,8 @@ class Formatter:
 		line = line.replace(r' ?', r'?')
 		line = line.replace(r'. ', r'.')
 		line = line.replace(r' .', r'.')
+		line = line.replace(r'/ * *', r'/**')
+		line = line.replace(r'* /', r'*/')
 		return line
 
 	def handle_colon(self, line):
@@ -202,21 +238,13 @@ class Formatter:
 					line = line.replace(old_generics, generics)
 
 		finded_braces = re.findall(r'val\s.*:', line)
+		finded_braces += re.findall(r'var\s.*:', line)
 		if finded_braces is not None:
 			for generics in finded_braces:
 				old_generics = generics
 				if ':' in generics:
 					generics = generics.replace(' :', ':')
 					line = line.replace(old_generics, generics)
-		# duplicate
-		finded_braces = re.findall(r'var\s.*:', line)
-		if finded_braces is not None:
-			for generics in finded_braces:
-				old_generics = generics
-				if ':' in generics:
-					generics = generics.replace(' :', ':')
-					line = line.replace(old_generics, generics)
-		# duplicate
 		return line			
 
 	def handle_for(self, line):
@@ -260,37 +288,71 @@ class Formatter:
 					line = line.replace(generics + ' ', generics) 
 		return line
 
+	def pre_handle_string(self):
+		temp_init_content = "`".join(self.init_content)
+		finded_multiline = re.findall(r'"""([^"]*)"""', temp_init_content)
+		if finded_multiline is not None:
+			for multiline in finded_multiline:
+				self.multi_strings.append(multiline)
+				temp_init_content = temp_init_content.replace("\"\"\"" + multiline  + "\"\"\"", "~~~formatter_multi_string~~~", 1)
+
+		finded_line = re.findall(r'"([^"]*)"', temp_init_content)
+		if finded_line is not None:
+			for line in finded_line:
+				self.strings.append(line)
+				temp_init_content = temp_init_content.replace("\"" + line  + "\"", "~~~formatter_string~~~", 1)
+		self.init_content = temp_init_content.split("`")
+
+	def post_handle_string(self):
+		temp_init_content = "`".join(self.finished_content)
+
+		for i, indent in enumerate(self.strings_indent):
+			res_str = "\"\"\""
+			skip_first = 0
+			for multiline in self.multi_strings[i].split('`'):
+				res_str += indent * self.indent_const * skip_first + multiline + "\n"
+				skip_first = 1
+			res_str = res_str[:-1]
+			res_str += "\"\"\""
+			temp_init_content = temp_init_content.replace("~~~formatter_multi_string~~~", res_str, 1)
+		for str in self.strings:
+			temp_init_content = temp_init_content.replace("~~~formatter_string~~~", "\"" + str + "\"", 1)
+		self.finished_content = temp_init_content.split("`")
+
 	def format_file(self):
-		self.iter_input = iter(self.next_input())
-		for line in self.iter_input:
-			line = self.handle_space_constructs(line)
-			
+		for i, line in enumerate(self.init_content):
+			self.init_content[i] = line.strip()
+		self.pre_handle_string()
+		#self.iter_input = iter(self.next_input())
+		for line in self.init_content:
+
+			#line = self.handle_space_constructs(line)
 			line = ' '.join(line.split())
+			#line = self.handle_spaces(line)
 
+			line = self.handle_multiline_comment(line)
+			if not self.is_multiline_comment:
+				line = self.handle_space_constructs(line)
 			
-			line = self.handle_if(line)
-			line = self.handle_for(line)
-			line = self.handle_colon(line)
-			line = self.handle_generics(line)
-			line = self.handle_spaces(line)
-			
+				line = ' '.join(line.split())
 
-			self.one_line_left_brace_hendler_list = list()
-			self.one_line_right_brace_hendler_list = list()
-			self.left_curly_brace_handler(line)
-			for line_brace in self.one_line_left_brace_hendler_list:
-				self.right_curly_brace_handler(line_brace)
-			self.finished_content.extend(self.one_line_right_brace_hendler_list)
+				line = self.handle_if(line)
+				line = self.handle_for(line)
+				line = self.handle_colon(line)
+				line = self.handle_generics(line)
+				line = self.handle_spaces(line)
+			
+				self.one_line_left_brace_hendler_list = list()
+				self.one_line_right_brace_hendler_list = list()
+				self.left_curly_brace_handler(line)
+				for line_brace in self.one_line_left_brace_hendler_list:
+					self.right_curly_brace_handler(line_brace)
+				self.finished_content.extend(self.one_line_right_brace_hendler_list)
+			else:
+				self.finished_content.append(line)
 		self.finished_content = self.handle_indentations(self.finished_content)
+		self.post_handle_string()
 
 	def print_finished_content(self):
 		for line in self.finished_content:
 			print(line)
-	# def find_pattern(self, line, pattern):
-	# 	search = re.search(pattern, line)
-	# 	if search is not None:
-
-	#def find_patterns(self, line):
-		#handle patterns for if when ...
-
-	#def analize():
