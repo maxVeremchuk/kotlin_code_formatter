@@ -1,5 +1,6 @@
 from formatter import formatter
 from formatter import analyzer
+import os
 if __name__ == '__main__':
 	indent_list = list()
 	long_line_list = list()
@@ -14,12 +15,13 @@ if __name__ == '__main__':
 		print("long_line_const: " + long_line_list[i])
 	print("Enter number of fromatting: ")
 	#num = int(input())	
-	print("Enter file: ")
-	#path = input()
-	analyzer = analyzer.Analyzer(r"C:\Users\maxve\OneDrive\Робочий стіл\4course\mataprograming\kotlin_code_formatter\test.kt")
+	print("Enter file path: ")
+	path = input()
+	analyzer = analyzer.Analyzer(path)
 	if analyzer.analyze():
-		fmt = formatter.Formatter(r"C:\Users\maxve\OneDrive\Робочий стіл\4course\mataprograming\kotlin_code_formatter\test.kt", indent_list[1], long_line_list[1])
+		fmt = formatter.Formatter(path, indent_list[1], long_line_list[1])
 		#fmt = formatter.Formatter(path, indent_list[num], long_line_list[num])
 		fmt.format_file()
-
-		print(fmt.print_finished_content())
+		with open(os.path.join(os.path.dirname(path), "output.kt").strip(), "w") as formatted_file:
+			formatted_file.write(fmt.get_formatted_text())
+			print(fmt.print_finished_content())

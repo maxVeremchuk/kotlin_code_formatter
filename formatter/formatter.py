@@ -14,12 +14,14 @@ class Formatter:
 	multi_strings = list()
 	strings = list()
 	strings_indent = list()
+	multi_coments = list()
 
 	def __init__(self, filename, indent_const, max_line_length_const):
 		with open(filename, "r") as file:
 			self.init_content = file.readlines()
 			
-
+	def get_formatted_text(self):
+		return "\n".join(self.finished_content)
 
 	def next_input(self):
 		for line in self.init_content:
@@ -34,26 +36,36 @@ class Formatter:
 		self.one_line_left_brace_hendler_list.append(last)
 
 
-	def handle_multiline_comment(self, line):
-		line.replace(' *', '*')
-		line.replace('* ', '*')
-		if not self.is_multiline_comment and "/**" in line:
-			self.is_multiline_comment = True
-			print("inside", self.is_multiline_comment)
-			#line = line.strip()
-			return line#.replace("/ * *", "/**")
-		else:
-			if '*/' in line:
-				self.is_multiline_comment = False
-			else:
-				line = line.replace('*','* ')
-				#line = line.replace("* /", "*/").strip()
-				#self.space_positions.append(len(self.finished_content))
-				#line.replace('* ', '*')
-				#line.replace('*', '* ')	
-			# elif line.startswith("*"):
-			# 	line = "~~~space_in_start~~~" + line	
-			return line	
+	# def handle_multiline_comment(self, line):
+	# 	line.replace(' *', '*')
+	# 	line.replace('* ', '*')
+	# 	# if not self.is_multiline_comment and "/*" in line:
+	# 	# 	self.is_multiline_comment = True
+	# 	# 	#print("inside", self.is_multiline_comment)
+	# 	# 	#line = line.strip()
+	# 	# 	return line#.replace("/ * *", "/**")
+	# 	# else:
+	# 	# 	if '*/' in line:
+	# 	# 		self.is_multiline_comment = False
+	# 	# 	else:
+	# 	# 		line = line.replace('*','* ')
+	# 	# 		#line = line.replace("* /", "*/").strip()
+	# 	# 		#self.space_positions.append(len(self.finished_content))
+	# 	# 		#line.replace('* ', '*')
+	# 	# 		#line.replace('*', '* ')	
+	# 	# 	# elif line.startswith("*"):
+	# 	# 	# 	line = "~~~space_in_start~~~" + line	
+	# 	# 	return line	
+	# 	if '/*' in line:
+	# 		comment = line[line.find('/*'):]
+	# 		in_one_line = True
+	# 		while True:
+	# 			if '*/' in line:
+	# 				if in_one_line:
+	# 					if line.find('*/') > line.find('/*'):
+	# 						comment = line[line.find('/*'):line.find('*/')]
+	# 			in_one_line = False
+
 		
 
 	def right_curly_brace_handler(self, line):
@@ -303,6 +315,16 @@ class Formatter:
 				temp_init_content = temp_init_content.replace("\"" + line  + "\"", "~~~formatter_string~~~", 1)
 		self.init_content = temp_init_content.split("`")
 
+	def pre_handle_multiline_comment(self):
+		temp_init_content = "`".join(self.init_content)
+		finded_multiline = re.findall("/\\*.*?\\*/", temp_init_content)
+		print(finded_multiline)
+		if finded_multiline is not None:
+			for multiline in finded_multiline:
+				self.multi_coments.append(multiline)
+				temp_init_content = temp_init_content.replace("" + multiline  + "", "~~~formatter_multi_comment~~~", 1)
+		self.init_content = temp_init_content.split("`")
+
 	def post_handle_string(self):
 		temp_init_content = "`".join(self.finished_content)
 
@@ -319,10 +341,18 @@ class Formatter:
 			temp_init_content = temp_init_content.replace("~~~formatter_string~~~", "\"" + str + "\"", 1)
 		self.finished_content = temp_init_content.split("`")
 
+	def post_handle_multi_comment(self):
+		temp_init_content = "`".join(self.finished_content)
+
+		for comment in self.multi_coments:
+			temp_init_content = temp_init_content.replace("~~~formatter_multi_comment~~~", comment, 1)
+		self.finished_content = temp_init_content.split("`")
+
 	def format_file(self):
 		for i, line in enumerate(self.init_content):
 			self.init_content[i] = line.strip()
 		self.pre_handle_string()
+		self.pre_handle_multiline_comment()
 		#self.iter_input = iter(self.next_input())
 		for line in self.init_content:
 
@@ -330,28 +360,30 @@ class Formatter:
 			line = ' '.join(line.split())
 			#line = self.handle_spaces(line)
 
-			line = self.handle_multiline_comment(line)
-			if not self.is_multiline_comment:
-				line = self.handle_space_constructs(line)
-			
-				line = ' '.join(line.split())
+			# line = self.handle_multiline_comment(line)
+			# if not self.is_multiline_comment:
+			# 	print(line)
+			line = self.handle_space_constructs(line)
+		
+			line = ' '.join(line.split())
 
-				line = self.handle_if(line)
-				line = self.handle_for(line)
-				line = self.handle_colon(line)
-				line = self.handle_generics(line)
-				line = self.handle_spaces(line)
-			
-				self.one_line_left_brace_hendler_list = list()
-				self.one_line_right_brace_hendler_list = list()
-				self.left_curly_brace_handler(line)
-				for line_brace in self.one_line_left_brace_hendler_list:
-					self.right_curly_brace_handler(line_brace)
-				self.finished_content.extend(self.one_line_right_brace_hendler_list)
-			else:
-				self.finished_content.append(line)
+			line = self.handle_if(line)
+			line = self.handle_for(line)
+			line = self.handle_colon(line)
+			line = self.handle_generics(line)
+			line = self.handle_spaces(line)
+		
+			self.one_line_left_brace_hendler_list = list()
+			self.one_line_right_brace_hendler_list = list()
+			self.left_curly_brace_handler(line)
+			for line_brace in self.one_line_left_brace_hendler_list:
+				self.right_curly_brace_handler(line_brace)
+			self.finished_content.extend(self.one_line_right_brace_hendler_list)
+			# else:
+			# 	self.finished_content.append(line)
 		self.finished_content = self.handle_indentations(self.finished_content)
 		self.post_handle_string()
+		self.post_handle_multi_comment()
 
 	def print_finished_content(self):
 		for line in self.finished_content:
