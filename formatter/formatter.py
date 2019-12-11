@@ -318,7 +318,6 @@ class Formatter:
 	def pre_handle_multiline_comment(self):
 		temp_init_content = "`".join(self.init_content)
 		finded_multiline = re.findall("/\\*.*?\\*/", temp_init_content)
-		print(finded_multiline)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
 				self.multi_coments.append(multiline)

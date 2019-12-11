@@ -1,3 +1,5 @@
+import re
+
 class Analyzer:
 	init_content = list()
 	bracket_stack = []
@@ -10,7 +12,38 @@ class Analyzer:
 			self.init_content = file.readlines()
 
 	def analyze(self):
-		for i, line in enumerate(self.init_content):
+		temp_init_content = "`".join(self.init_content)
+
+		finded_multiline = re.findall(r'"""([^"]*)"""', temp_init_content)
+		if finded_multiline is not None:
+			for multiline in finded_multiline:
+				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
+				.replace("}", "~").replace("[", "~").replace("]", "~")
+				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
+		finded_multiline = re.findall(r'"([^"]*)"', temp_init_content)
+		if finded_multiline is not None:
+			for multiline in finded_multiline:
+				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
+				.replace("}", "~").replace("[", "~").replace("]", "~")
+				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
+
+		finded_multiline = re.findall("/\\*.*?\\*/", temp_init_content)
+		if finded_multiline is not None:
+			for multiline in finded_multiline:
+				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
+				.replace("}", "~").replace("[", "~").replace("]", "~")
+				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
+
+		finded_multiline = re.findall("//.*$", temp_init_content)
+		if finded_multiline is not None:
+			for multiline in finded_multiline:
+				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
+				.replace("}", "~").replace("[", "~").replace("]", "~")
+				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
+		print(temp_init_content)
+		temp_init_content = temp_init_content.split("`")
+
+		for i, line in enumerate(temp_init_content):
 			for j, letter in enumerate(line):
 				if letter in self.open_list:
 					self.last_bracket.clear()
