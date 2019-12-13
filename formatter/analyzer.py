@@ -17,30 +17,29 @@ class Analyzer:
 		finded_multiline = re.findall(r'"""([^"]*)"""', temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
-				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
-				.replace("}", "~").replace("[", "~").replace("]", "~")
+				rep_mult = multiline.replace("{", "~1").replace("}", "~2").replace(")", "~3").replace("(", "~4")\
+				.replace("[", "~5").replace("]", "~6")
 				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
 		finded_multiline = re.findall(r'"([^"]*)"', temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
-				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
-				.replace("}", "~").replace("[", "~").replace("]", "~")
+				rep_mult = multiline.replace("{", "~1").replace("}", "~2").replace(")", "~3").replace("(", "~4")\
+				.replace("[", "~5").replace("]", "~6")
 				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
 
 		finded_multiline = re.findall("/\\*.*?\\*/", temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
-				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
-				.replace("}", "~").replace("[", "~").replace("]", "~")
+				rep_mult = multiline.replace("{", "~1").replace("}", "~2").replace(")", "~3").replace("(", "~4")\
+				.replace("[", "~5").replace("]", "~6")
 				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
 
 		finded_multiline = re.findall("//.*$", temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
-				rep_mult = multiline.replace("{", "~").replace("}", "~").replace("{", "~").replace("(", "~")\
-				.replace("}", "~").replace("[", "~").replace("]", "~")
+				rep_mult = multiline.replace("{", "~1").replace("}", "~2").replace(")", "~3").replace("(", "~4")\
+				.replace("[", "~5").replace("]", "~6")
 				temp_init_content = temp_init_content.replace(multiline, rep_mult, 1)
-		print(temp_init_content)
 		temp_init_content = temp_init_content.split("`")
 
 		for i, line in enumerate(temp_init_content):

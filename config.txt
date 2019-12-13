@@ -1,4 +1,15 @@
-4 80
-4 60
-2 80
-2 60
+[space]
+space_after_if = True
+space_after_for = True
+space_after_while = True
+space_after_when = True
+space_after_catch = True
+space_before_comma = False
+space_after_comma = True
+replace_multiple_spaces = True
+[lines]
+indent_const_value = 4
+max_line_length_const = 60	
+split_long_lines = False
+del_redundant_empty_lines = True
+format_curly_braces = True

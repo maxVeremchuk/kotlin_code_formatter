@@ -1,4 +1,5 @@
 import re
+import configparser
 
 class Formatter:
 
@@ -8,15 +9,49 @@ class Formatter:
 	one_line_right_brace_hendler_list = list()
 	iter_input = iter("")
 	is_multiline_comment = False
-	indent_const = "    "	#config
-	max_line_length_const = 60 #config
+
 	space_positions = list()
 	multi_strings = list()
 	strings = list()
 	strings_indent = list()
 	multi_coments = list()
+	indent_const = ""	
+	########config#############
+	space_after_if = True
+	space_after_for = True
+	space_after_while = True
+	space_after_when = True
+	space_after_catch = True
+	space_before_comma = False
+	space_after_comma = True
+	replace_multiple_spaces = True
+	indent_const_value = 4
+	max_line_length_const = 60	
+	split_long_lines = False
+	del_redundant_empty_lines = True
+	format_curly_braces = True
 
-	def __init__(self, filename, indent_const, max_line_length_const):
+
+	def __init__(self, filename, config_filename):
+		config_parser = configparser.RawConfigParser()   
+		config_parser.read(config_filename)
+		
+		self.space_after_if = config_parser.get('space', 'space_after_if')
+		self.space_after_for = config_parser.get('space', 'space_after_for')
+		self.space_after_while = config_parser.get('space', 'space_after_while')
+		self.space_after_when = config_parser.get('space', 'space_after_when')
+		self.space_after_catch = config_parser.get('space', 'space_after_catch')
+		self.space_before_comma = config_parser.get('space', 'space_before_comma')
+		self.space_after_comma = config_parser.get('space', 'space_after_comma')
+		self.replace_multiple_spaces = config_parser.get('space', 'replace_multiple_spaces')
+
+		self.indent_const_value = config_parser.get('lines', 'indent_const_value')
+		self.max_line_length_const = config_parser.get('lines', 'max_line_length_const')	
+		self.split_long_lines = config_parser.get('lines', 'split_long_lines')
+		self.del_redundant_empty_lines = config_parser.get('lines', 'del_redundant_empty_lines')
+		self.format_curly_braces = config_parser.get('lines', 'format_curly_braces')
+		self.indent_const = " " * int(self.indent_const_value)
+
 		with open(filename, "r") as file:
 			self.init_content = file.readlines()
 			
@@ -82,9 +117,15 @@ class Formatter:
 		fixed_list = list()
 		for line in lines_list:
 			if '}' in line:
-				identation -= 1
+				identation -= line.count('}')
+			#if self.split_long_lines:
 
-			if len(line) > self.max_line_length_const and not line.startswith("~"):
+				#print("absurd",self.split_long_lines )
+			if self.split_long_lines and (len(line) > int(self.max_line_length_const)) and not line.startswith("~"):
+				#print("hhhhhhhhhhhhhhheeeeeeeeeeeeeeeeeeeeeere", self.split_long_lines)
+				#print(len(line) > int(self.max_line_length_const))
+				#print(not line.startswith("~"))
+				#print(len(line) > int(self.max_line_length_const) and not line.startswith("~") and self.split_long_lines)
 				fixed_list.extend(self.handle_long_line(line, identation))
 			else:	
 				if line.startswith("*"):
@@ -95,7 +136,7 @@ class Formatter:
 					fixed_list.append(identation * self.indent_const + line.strip())
 
 			if '{' in line:
-				identation += 1
+				identation += line.count('{')
 			
 		return fixed_list
 
@@ -106,12 +147,12 @@ class Formatter:
 		if line.strip().startswith("import"):
 			finished_list.append(line)
 			return finished_list
-		if len(line) < self.max_line_length_const:
+		if len(line) < int(self.max_line_length_const):
 			finished_list.append((self.indent_const * identation + line))
 			return finished_list
 		
 		if "class" in line and ") :" in line:
-			der, base = line.split(") :")
+			der, base = line.rsplit(") :", 1)
 			finished_list.extend(self.split_by_comma(der, identation + 1))
 			base = ") :" + base
 			#finished_list.extend(self.split_by_comma(base, identation + 1))
@@ -127,7 +168,7 @@ class Formatter:
 			finished_list.extend(item.replace('`', ',') for item in temp_list)
 
 		elif "class" in line:
-			der, base = line.split(":")
+			der, base = line.rsplit(":", 1)
 			der = der + ":"
 			finished_list.extend(self.split_by_comma_last(der, identation))
 			finished_list.extend(self.split_by_comma_last(base, identation + 1))
@@ -201,14 +242,22 @@ class Formatter:
 		return finished_list
 
 	def handle_space_constructs(self, line):
-		line = line.replace(r'=', r' = ')
-		line = line.replace(r'>', r' > ')
-		line = line.replace(r'<', r' < ')
-		line = line.replace(r':', r' : ')
-		line = line.replace(r'+', r' + ')
-		line = line.replace(r'-', r' - ')
-		line = line.replace(r'*', r' * ')
-		line = line.replace(r'/', r' / ')
+		# line = line.replace(r'=', r' = ')
+		# line = line.replace(r'>', r' > ')
+		# line = line.replace(r'<', r' < ')
+		# line = line.replace(r':', r' : ')
+		# line = line.replace(r'+', r' + ')
+		# line = line.replace(r'-', r' - ')
+		# line = line.replace(r'*', r' * ')
+		# line = line.replace(r'/', r' / ')
+		line = re.sub(r"\s*\+\s*", r" + ", line)
+		line = re.sub(r"\s*=\s*", r" = ", line)
+		line = re.sub(r"\s*>\s*", r" > ", line)
+		line = re.sub(r"\s*<\s*", r" < ", line)
+		line = re.sub(r"\s*:\s*", r" : ", line)
+		line = re.sub(r"\s*-\s*", r" - ", line)
+		line = re.sub(r"\s*\*\s*", r" * ", line)
+		line = re.sub(r"\s*/\s*", r" / ", line)
 		return line
 
 	def handle_spaces(self, line):
@@ -222,22 +271,21 @@ class Formatter:
 			line = line.replace('[ ','[')
 		line = line.replace('{', ' {')
 		if r'\\ ' not in line: 
-			line = line.replace(r'\\',r'\\ ')
-		line = line.replace(r'= =',r'==')
-		line = line.replace(r'! =',r'!=')
-		line = line.replace(r'> =',r'>=')
-		line = line.replace(r'< =',r'<=')
-		line = line.replace(r'? .',r'?.')
+			line = line.replace(r'\\',r'\\ ', 1)
+		line = re.sub(r"=\s+=", r"==", line)
+		line = re.sub(r"!\s+=", r"!=", line)
+		line = re.sub(r">\s+=", r">=", line)
+		line = re.sub(r"<\s+=", r"<=", line)
+		line = re.sub(r"\?\s+\.", r"?.", line)
+		line = re.sub(r":\s+:", r"::", line)
+		line = re.sub(r"-\s+>", r"->", line)
+		line = re.sub(r"\s+\?", r"?", line)
+		line = re.sub(r"\.\s+", r".", line)
+		line = re.sub(r"\s+\.", r".", line)
+		line = line.replace(r'object:', r'object :')
 		line = line.replace(r'>:', r'> :')
 		line = line.replace(r'):', r') :')
-		line = line.replace(r': :', r'::')
-		line = line.replace(r'object:', r'object :')
-		line = line.replace(r'- >', r'->')
-		line = line.replace(r' ?', r'?')
-		line = line.replace(r'. ', r'.')
-		line = line.replace(r' .', r'.')
-		line = line.replace(r'/ * *', r'/**')
-		line = line.replace(r'* /', r'*/')
+
 		return line
 
 	def handle_colon(self, line):
@@ -260,31 +308,48 @@ class Formatter:
 		return line			
 
 	def handle_for(self, line):
-		while re.search(r'^\sfor', line) is not None:
-			line = line.replace('for', ' for')
-		while re.search(r'for\(', line) is not None:
-			line = line.replace('for(', 'for (')
+		if self.space_after_for:
+			line = re.sub(r"(\W)(for\()", r"\1for (", line)
+			line = re.sub(r"^for\(", r"for (", line)
+		else:
+			line = re.sub(r"(\W)(for\s\()", r"\1for(", line)
+			line = re.sub(r"^for\s\(", r"for(", line)
 		return line
 
 	def handle_if(self, line):
-		while re.search(r'^\sif', line) is not None:
-			line = line.replace('if', ' if')
-		while re.search(r'if\(', line) is not None:
-			line = line.replace('if(', 'if (')
+		if self.space_after_if:
+			line = re.sub(r"(\W)(if\()", r"\1if (", line)
+			line = re.sub(r"^if\(", r"if (", line)
+		else:
+			line = re.sub(r"(\W)(if\s\()", r"\1if(", line)
+			line = re.sub(r"^if\s\(", r"if(", line)
 		return line
 
 	def handle_while(self, line):
-		while re.search(r'^\swhile', line) is not None:
-			line = line.replace('while', ' while')
-		while re.search(r'while\(', line) is not None:
-			line = line.replace('while(', 'while (')
+		if self.space_after_while:
+			line = re.sub(r"(\W)(while\()", r"\1while (", line)
+			line = re.sub(r"^while\(", r"while (", line)
+		else:
+			line = re.sub(r"(\W)(while\s\()", r"\1while(", line)
+			line = re.sub(r"^while\s\(", r"while(", line)
 		return line
 
 	def handle_when(self, line):
-		while re.search(r'^\swhen', line) is not None:
-			line = line.replace('when', ' when')
-		while re.search(r'when\(', line) is not None:
-			line = line.replace('when(', 'when (')
+		if self.space_after_when:
+			line = re.sub(r"(\W)(when\()", r"\1when (", line)
+			line = re.sub(r"^when\(", r"when (", line)
+		else:
+			line = re.sub(r"(\W)(when\s\()", r"\1when(", line)
+			line = re.sub(r"^when\s\(", r"when(", line)
+		return line
+
+	def handle_catch(self, line):
+		if self.space_after_catch:
+			line = re.sub(r"(\W)(catch\()", r"\1catch (", line)
+			line = re.sub(r"^catch\(", r"catch (", line)
+		else:
+			line = re.sub(r"(\W)(catch\s\()", r"\1catch(", line)
+			line = re.sub(r"^catch\s\(", r"catch(", line)
 		return line
 
 	def handle_generics(self, line):
@@ -316,7 +381,10 @@ class Formatter:
 		self.init_content = temp_init_content.split("`")
 
 	def pre_handle_multiline_comment(self):
+
 		temp_init_content = "`".join(self.init_content)
+		temp_init_content = re.sub(r"/\s*\*\s*\*", r"/**", temp_init_content)
+		temp_init_content = re.sub(r"\*\s+/", r"*/", temp_init_content)
 		finded_multiline = re.findall("/\\*.*?\\*/", temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
@@ -347,16 +415,44 @@ class Formatter:
 			temp_init_content = temp_init_content.replace("~~~formatter_multi_comment~~~", comment, 1)
 		self.finished_content = temp_init_content.split("`")
 
+	
+	def post_lines(self):
+		new_content = []
+		for line in self.finished_content:
+			if self.space_before_comma:
+				line = re.sub(r"\s*,", r" ,", line)
+			else:
+				line = re.sub(r"\s*,", r",", line)
+
+			if self.space_after_comma:
+				line = re.sub(r",\s*", r", ", line)
+			else:
+				line = re.sub(r",\s*", r",", line)
+			new_content.append(line)
+		self.finished_content = new_content
+
 	def format_file(self):
 		for i, line in enumerate(self.init_content):
 			self.init_content[i] = line.strip()
 		self.pre_handle_string()
 		self.pre_handle_multiline_comment()
+		is_redundant_empty_line = False
 		#self.iter_input = iter(self.next_input())
 		for line in self.init_content:
+			if line.strip() == "" and self.del_redundant_empty_lines:
+				if is_redundant_empty_line:
+					continue
+				else:
+					self.finished_content.append("")
+					is_redundant_empty_line = True
+			elif line.strip() == "" and not self.del_redundant_empty_lines:
+				self.finished_content.append("")
+			elif line.strip() != "":
+				is_redundant_empty_line = False
 
 			#line = self.handle_space_constructs(line)
-			line = ' '.join(line.split())
+			if self.replace_multiple_spaces:
+				line = ' '.join(line.split())
 			#line = self.handle_spaces(line)
 
 			# line = self.handle_multiline_comment(line)
@@ -364,25 +460,35 @@ class Formatter:
 			# 	print(line)
 			line = self.handle_space_constructs(line)
 		
-			line = ' '.join(line.split())
+			if self.replace_multiple_spaces:
+				line = ' '.join(line.split())
 
 			line = self.handle_if(line)
 			line = self.handle_for(line)
+			line = self.handle_while(line)
+			line = self.handle_when(line)
+			line = self.handle_catch(line)
 			line = self.handle_colon(line)
 			line = self.handle_generics(line)
 			line = self.handle_spaces(line)
 		
 			self.one_line_left_brace_hendler_list = list()
 			self.one_line_right_brace_hendler_list = list()
-			self.left_curly_brace_handler(line)
-			for line_brace in self.one_line_left_brace_hendler_list:
-				self.right_curly_brace_handler(line_brace)
-			self.finished_content.extend(self.one_line_right_brace_hendler_list)
+			if self.format_curly_braces:
+				self.left_curly_brace_handler(line)
+				for line_brace in self.one_line_left_brace_hendler_list:
+					self.right_curly_brace_handler(line_brace)
+				self.finished_content.extend(self.one_line_right_brace_hendler_list)
+			else:
+				self.finished_content.append(line)
 			# else:
 			# 	self.finished_content.append(line)
+		
 		self.finished_content = self.handle_indentations(self.finished_content)
+
 		self.post_handle_string()
 		self.post_handle_multi_comment()
+		self.post_lines()
 
 	def print_finished_content(self):
 		for line in self.finished_content:
