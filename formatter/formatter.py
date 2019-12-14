@@ -206,7 +206,7 @@ class Formatter:
 	def split_by_dot(self, line, identation):
 		finished_list = list()
 		sep_by_dot = line.split('.')
-		finished_list.append(self.indent_const * identation + sep_by_dot[0].strip())
+		finished_list.append(self.indent_const * (identation - 1) + sep_by_dot[0].strip())
 		for i, dot_item in enumerate(sep_by_dot):
 			if i == 0:
 				continue
@@ -283,6 +283,7 @@ class Formatter:
 		line = re.sub(r"\s+\?", r"?", line)
 		line = re.sub(r"\.\s+", r".", line)
 		line = re.sub(r"\s+\.", r".", line)
+		line = re.sub(r"\s+;", r";", line)
 		line = line.replace(r'object:', r'object :')
 		line = line.replace(r'>:', r'> :')
 		line = line.replace(r'):', r') :')
@@ -355,15 +356,30 @@ class Formatter:
 
 	def handle_generics(self, line):
 		finded_generics = re.findall(r'<[^>]+>', line)
+		open_list = ["[","{","("] 
+		close_list = ["]","}",")"] 
 		if finded_generics is not None:
 			for generics in finded_generics:
-				old_generics = generics	
-				if '||' not in generics and '&&' not in generics:
-					generics = generics.replace('< ', '<')
-					generics = generics.replace(' >', '>')
-					line = line.replace(old_generics, generics)
-					line = line.replace(' ' + generics, generics)
-					line = line.replace(generics + ' ', generics) 
+				is_generic = True
+				bracket_stack = []
+				for j, letter in enumerate(generics):
+					if letter in open_list:
+						bracket_stack.append(letter)
+					elif letter in close_list:
+						pos = close_list.index(letter)
+						if ((len(bracket_stack) > 0) and (open_list[pos] == bracket_stack[-1])): 
+							bracket_stack.pop()
+						else:
+							is_generic = False
+							break
+				if is_generic:
+					old_generics = generics	
+					if '||' not in generics and '&&' not in generics and ";" not in generics:
+						generics = generics.replace('< ', '<')
+						generics = generics.replace(' >', '>')
+						line = line.replace(old_generics, generics)
+						line = line.replace(' ' + generics, generics)
+						line = line.replace(generics + ' ', generics) 
 		return line
 
 	def pre_handle_string(self):
