@@ -36,25 +36,30 @@ class Formatter:
 		config_parser = configparser.RawConfigParser()   
 		config_parser.read(config_filename)
 		
-		self.space_after_if = config_parser.get('space', 'space_after_if')
-		self.space_after_for = config_parser.get('space', 'space_after_for')
-		self.space_after_while = config_parser.get('space', 'space_after_while')
-		self.space_after_when = config_parser.get('space', 'space_after_when')
-		self.space_after_catch = config_parser.get('space', 'space_after_catch')
-		self.space_before_comma = config_parser.get('space', 'space_before_comma')
-		self.space_after_comma = config_parser.get('space', 'space_after_comma')
-		self.replace_multiple_spaces = config_parser.get('space', 'replace_multiple_spaces')
+		self.space_after_if = self.cast_bool(config_parser.get('space', 'space_after_if'))
+		self.space_after_for = self.cast_bool(config_parser.get('space', 'space_after_for'))
+		self.space_after_while = self.cast_bool(config_parser.get('space', 'space_after_while'))
+		self.space_after_when = self.cast_bool(config_parser.get('space', 'space_after_when'))
+		self.space_after_catch = self.cast_bool(config_parser.get('space', 'space_after_catch'))
+		self.space_before_comma = self.cast_bool(config_parser.get('space', 'space_before_comma'))
+		self.space_after_comma = self.cast_bool(config_parser.get('space', 'space_after_comma'))
+		self.replace_multiple_spaces = self.cast_bool(config_parser.get('space', 'replace_multiple_spaces'))
 
 		self.indent_const_value = config_parser.get('lines', 'indent_const_value')
 		self.max_line_length_const = config_parser.get('lines', 'max_line_length_const')	
-		self.split_long_lines = config_parser.get('lines', 'split_long_lines')
-		self.del_redundant_empty_lines = config_parser.get('lines', 'del_redundant_empty_lines')
-		self.format_curly_braces = config_parser.get('lines', 'format_curly_braces')
+		self.split_long_lines = self.cast_bool(config_parser.get('lines', 'split_long_lines'))
+		self.del_redundant_empty_lines = self.cast_bool(config_parser.get('lines', 'del_redundant_empty_lines'))
+		self.format_curly_braces = self.cast_bool(config_parser.get('lines', 'format_curly_braces'))
 		self.indent_const = " " * int(self.indent_const_value)
 
 		with open(filename, "r") as file:
 			self.init_content = file.readlines()
-			
+		
+	def cast_bool(self, str):
+		if str == "True":
+			return True
+		return False
+
 	def get_formatted_text(self):
 		return "\n".join(self.finished_content)
 
@@ -122,10 +127,6 @@ class Formatter:
 
 				#print("absurd",self.split_long_lines )
 			if self.split_long_lines and (len(line) > int(self.max_line_length_const)) and not line.startswith("~"):
-				#print("hhhhhhhhhhhhhhheeeeeeeeeeeeeeeeeeeeeere", self.split_long_lines)
-				#print(len(line) > int(self.max_line_length_const))
-				#print(not line.startswith("~"))
-				#print(len(line) > int(self.max_line_length_const) and not line.startswith("~") and self.split_long_lines)
 				fixed_list.extend(self.handle_long_line(line, identation))
 			else:	
 				if line.startswith("*"):
