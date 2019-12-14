@@ -16,6 +16,7 @@ class Formatter:
 	strings_indent = list()
 	multi_coments = list()
 	indent_const = ""	
+	additional_indent = 0
 	########config#############
 	space_after_if = True
 	space_after_for = True
@@ -73,40 +74,7 @@ class Formatter:
 		del lines[-1]
 		for brace_lines in lines:
 			self.one_line_left_brace_hendler_list.append(brace_lines.strip() + " {")
-		self.one_line_left_brace_hendler_list.append(last)
-
-
-	# def handle_multiline_comment(self, line):
-	# 	line.replace(' *', '*')
-	# 	line.replace('* ', '*')
-	# 	# if not self.is_multiline_comment and "/*" in line:
-	# 	# 	self.is_multiline_comment = True
-	# 	# 	#print("inside", self.is_multiline_comment)
-	# 	# 	#line = line.strip()
-	# 	# 	return line#.replace("/ * *", "/**")
-	# 	# else:
-	# 	# 	if '*/' in line:
-	# 	# 		self.is_multiline_comment = False
-	# 	# 	else:
-	# 	# 		line = line.replace('*','* ')
-	# 	# 		#line = line.replace("* /", "*/").strip()
-	# 	# 		#self.space_positions.append(len(self.finished_content))
-	# 	# 		#line.replace('* ', '*')
-	# 	# 		#line.replace('*', '* ')	
-	# 	# 	# elif line.startswith("*"):
-	# 	# 	# 	line = "~~~space_in_start~~~" + line	
-	# 	# 	return line	
-	# 	if '/*' in line:
-	# 		comment = line[line.find('/*'):]
-	# 		in_one_line = True
-	# 		while True:
-	# 			if '*/' in line:
-	# 				if in_one_line:
-	# 					if line.find('*/') > line.find('/*'):
-	# 						comment = line[line.find('/*'):line.find('*/')]
-	# 			in_one_line = False
-
-		
+		self.one_line_left_brace_hendler_list.append(last)		
 
 	def right_curly_brace_handler(self, line):
 		lines = line.split('}')
@@ -120,8 +88,10 @@ class Formatter:
 	def handle_indentations(self, lines_list):
 		identation =  0
 		fixed_list = list()
+
 		for line in lines_list:
 			if '}' in line:
+				self.additional_indent = 0
 				identation -= line.count('}')
 			#if self.split_long_lines:
 
@@ -130,11 +100,11 @@ class Formatter:
 				fixed_list.extend(self.handle_long_line(line, identation))
 			else:	
 				if line.startswith("*"):
-					fixed_list.append(identation * self.indent_const + " " + line.strip())
+					fixed_list.append((identation + self.additional_indent) * self.indent_const + " " + line.strip())
 				else:
 					if "~~~formatter_multi_string~~~" in line:
 						self.strings_indent.append(identation)
-					fixed_list.append(identation * self.indent_const + line.strip())
+					fixed_list.append((identation + self.additional_indent) * self.indent_const + line.strip())
 
 			if '{' in line:
 				identation += line.count('{')
@@ -215,6 +185,13 @@ class Formatter:
 				finished_list.append(self.indent_const * identation + "?." + dot_item.strip())
 			elif len(dot_item) > 0:
 				finished_list.append(self.indent_const * identation + "." + dot_item.strip())
+
+		for fline in finished_list:
+
+			if "{" in fline:
+				self.additional_indent += 1
+				continue
+
 		return finished_list
 
 	def split_by_comma(self, line, identation):
@@ -243,14 +220,6 @@ class Formatter:
 		return finished_list
 
 	def handle_space_constructs(self, line):
-		# line = line.replace(r'=', r' = ')
-		# line = line.replace(r'>', r' > ')
-		# line = line.replace(r'<', r' < ')
-		# line = line.replace(r':', r' : ')
-		# line = line.replace(r'+', r' + ')
-		# line = line.replace(r'-', r' - ')
-		# line = line.replace(r'*', r' * ')
-		# line = line.replace(r'/', r' / ')
 		line = re.sub(r"\s*\+\s*", r" + ", line)
 		line = re.sub(r"\s*=\s*", r" = ", line)
 		line = re.sub(r"\s*>\s*", r" > ", line)
@@ -356,8 +325,8 @@ class Formatter:
 
 	def handle_generics(self, line):
 		finded_generics = re.findall(r'<[^>]+>', line)
-		open_list = ["[","{","("] 
-		close_list = ["]","}",")"] 
+		open_list = ["[","{","("]
+		close_list = ["]","}",")"]
 		if finded_generics is not None:
 			for generics in finded_generics:
 				is_generic = True
