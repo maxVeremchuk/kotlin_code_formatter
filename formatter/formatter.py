@@ -88,14 +88,14 @@ class Formatter:
 	def handle_indentations(self, lines_list):
 		identation =  0
 		fixed_list = list()
-
 		for line in lines_list:
 			if '}' in line:
 				self.additional_indent = 0
 				identation -= line.count('}')
-			#if self.split_long_lines:
-
-				#print("absurd",self.split_long_lines )
+			# if line.find('(') > line.find(')') or (')' in line and '(' not in line):
+			# 	identation -= 1
+			if line.strip().endswith("="):
+				self.additional_indent = 1
 			if self.split_long_lines and (len(line) > int(self.max_line_length_const)) and not line.startswith("~"):
 				fixed_list.extend(self.handle_long_line(line, identation))
 			else:	
@@ -108,8 +108,32 @@ class Formatter:
 
 			if '{' in line:
 				identation += line.count('{')
+
+		new_fixed_list = list()
+		identation = 0
+		bracket_stack = []
+		temp_bracket_stack = []
+		open_list = ["("]
+		close_list = [")"]
+		identation_delta = 0
+		for line in fixed_list:
+			bracket_stack = []
+			for j, letter in enumerate(line):
+				if letter in open_list:
+					bracket_stack.append(letter)
+				elif letter in close_list:
+					
+					pos = close_list.index(letter)
+					if ((len(bracket_stack) > 0) and (open_list[pos] == bracket_stack[-1])):
+						bracket_stack.pop()
+					else:
+						identation_delta -= 1
 			
-		return fixed_list
+			new_fixed_list.append((identation)* self.indent_const + line)
+			identation += identation_delta
+			identation_delta = 0
+			identation += bracket_stack.count('(')
+		return new_fixed_list
 
 
 	def handle_long_line(self, line, identation):
@@ -122,27 +146,48 @@ class Formatter:
 			finished_list.append((self.indent_const * identation + line))
 			return finished_list
 		
-		if "class" in line and ") :" in line:
-			der, base = line.rsplit(") :", 1)
-			finished_list.extend(self.split_by_comma(der, identation + 1))
-			base = ") :" + base
-			#finished_list.extend(self.split_by_comma(base, identation + 1))
-			#finished_list.extend(self.handle_long_line(base, identation))
-			finded_braces = re.findall(r'\([^\)]+\)', base)
-			if finded_braces is not None:
-				for generics in finded_braces:
+		if ("class" in line or "fun" in line or "object" in line) and ") :" in line:
+			finded_generics = re.findall(r'<[^>]+>', line)
+			if finded_generics is not None:
+				for generics in finded_generics:
 					old_generics = generics
-					if ',' in generics:
-						generics = generics.replace(',', '`')
-						base = base.replace(old_generics, generics)
-			temp_list = self.split_by_comma_last(base, identation + 1)
-			finished_list.extend(item.replace('`', ',') for item in temp_list)
-
-		elif "class" in line:
-			der, base = line.rsplit(":", 1)
-			der = der + ":"
-			finished_list.extend(self.split_by_comma_last(der, identation))
-			finished_list.extend(self.split_by_comma_last(base, identation + 1))
+					generics = generics.replace(":", "→")
+					line = line.replace(old_generics, generics)
+			if ") :" in line:
+				line = line.replace("→", ":")
+				der, base = line.rsplit(") :", 1)
+				finished_list.extend(self.split_by_comma(der, identation + 1))
+				base = ") :" + base
+				#finished_list.extend(self.split_by_comma(base, identation + 1))
+				#finished_list.extend(self.handle_long_line(base, identation))
+				finded_braces = re.findall(r'\([^\)]+\)', base)
+				if finded_braces is not None:
+					for generics in finded_braces:
+						old_generics = generics
+						if ',' in generics:
+							generics = generics.replace(',', '→')
+							base = base.replace(old_generics, generics)
+				temp_list = self.split_by_comma_last(base, identation + 1)
+				finished_list.extend(item.replace('→', ',') for item in temp_list)
+			else:
+				line = line.replace("→", ":")
+				finished_list.append(line)
+		elif "class" in line or "fun" in line or "object" in line:
+			finded_generics = re.findall(r'<[^>]+>', line)
+			if finded_generics is not None:
+				for generics in finded_generics:
+					old_generics = generics
+					generics = generics.replace(":", "→")
+					line = line.replace(old_generics, generics)
+			if ":" in line:
+				line = line.replace("→", ":")
+				der, base = line.rsplit(":", 1)
+				der = der + ":"
+				finished_list.extend(self.split_by_comma_last(der, identation))
+				finished_list.extend(self.split_by_comma_last(base, identation + 1))
+			else:
+				line = line.replace("→", ":")
+				finished_list.append(line)
 		elif "if (" in line or "when (" in line:
 			temp_list = list()
 			split_by_or_op = line.split("||")
@@ -161,14 +206,15 @@ class Formatter:
 			bef_equal, after_equal = line.split('=', 1)
 			finished_list.append(bef_equal + '=')
 			finished_list.extend(self.handle_long_line(after_equal.strip(), identation + 1))
-		elif "." in line:
-			finished_list.extend(self.split_by_dot(line, identation + 1))
-		elif "," in line:
-			finished_list.extend(self.split_by_comma(der, identation + 1))
 		elif "->" in line:
 			bef_sign, after_sign = line.split('->', 1)
-			finished_list.append(bef_sign + '->')
+			finished_list.extend(self.handle_long_line(bef_sign.strip(), identation))
+			finished_list[-1] += ' ->'
 			finished_list.extend(self.handle_long_line(after_sign.strip(), identation + 1))
+		elif "," in line:
+			finished_list.extend(self.split_by_comma(line, identation + 1))
+		elif "." in line:
+			finished_list.extend(self.split_by_dot(line, identation + 1))
 		else:
 			finished_list.append(line)
 		return finished_list
@@ -196,18 +242,40 @@ class Formatter:
 
 	def split_by_comma(self, line, identation):
 		finished_list = list()
+		finded_generics = re.findall(r'<[^>]+>', line)
+		if finded_generics is not None:
+			for generics in finded_generics:
+				old_generics = generics
+				generics = generics.replace(",", "→")
+				line = line.replace(old_generics, generics)
+		if "," not in line:
+			finished_list.append(line.replace("→", ","))
+			return finished_list
 		sep_by_comma = line.split(',')
 		first = sep_by_comma[0].strip()
 		del sep_by_comma[0]
 		rightest_brace_idnex = first.rfind('(')
-		finished_list.append(first[:rightest_brace_idnex + 1])
+		first_indent = 0
+		if first.count('(') > first.count(')') or first.rfind("(") > first.rfind(")"):
+			first_indent -= 1
+		finished_list.append(self.indent_const * (identation + first_indent) + first[:rightest_brace_idnex + 1])
 		if len(sep_by_comma) > 0:
-			finished_list.append(self.indent_const * identation + first[rightest_brace_idnex + 1:].strip() + ',')
+			finished_list.append(self.indent_const * (identation) + first[rightest_brace_idnex + 1:].strip() + ',')
 		else:
-			finished_list.append(self.indent_const * identation + first[rightest_brace_idnex + 1:].strip())
+			finished_list.append(self.indent_const * (identation) + first[rightest_brace_idnex + 1:].strip())
+		not_empty = False
 		for comma_item in sep_by_comma:
+			not_empty = True
 			finished_list.append(self.indent_const * identation + comma_item.strip() + ',')
-		return finished_list
+		if not_empty:
+			finished_list[-1] = finished_list[-1][:-1]
+		new_finished_list = []
+		for list_line in finished_list:
+			if list_line.strip() == "":
+				continue
+			new_finished_list.append(list_line.replace("→", ","))
+
+		return new_finished_list
 
 	def split_by_comma_last(self, line, identation):
 		finished_list = list()
@@ -224,7 +292,7 @@ class Formatter:
 		line = re.sub(r"\s*=\s*", r" = ", line)
 		line = re.sub(r"\s*>\s*", r" > ", line)
 		line = re.sub(r"\s*<\s*", r" < ", line)
-		line = re.sub(r"\s*:\s*", r" : ", line)
+		line = re.sub(r"\s*:\s*", r": ", line)
 		line = re.sub(r"\s*-\s*", r" - ", line)
 		line = re.sub(r"\s*\*\s*", r" * ", line)
 		line = re.sub(r"\s*/\s*", r" / ", line)
@@ -265,7 +333,7 @@ class Formatter:
 			for generics in finded_braces:
 				old_generics = generics
 				if ':' in generics:
-					generics = generics.replace(' :', ':')
+					generics = re.sub(r"\s+:", r":", generics)
 					line = line.replace(old_generics, generics)
 
 		finded_braces = re.findall(r'val\s.*:', line)
@@ -274,7 +342,7 @@ class Formatter:
 			for generics in finded_braces:
 				old_generics = generics
 				if ':' in generics:
-					generics = generics.replace(' :', ':')
+					generics = re.sub(r"\s+:", r":", generics)
 					line = line.replace(old_generics, generics)
 		return line			
 
@@ -346,13 +414,13 @@ class Formatter:
 					if '||' not in generics and '&&' not in generics and ";" not in generics:
 						generics = generics.replace('< ', '<')
 						generics = generics.replace(' >', '>')
+						generics = generics.replace(':', ' :')
 						line = line.replace(old_generics, generics)
 						line = line.replace(' ' + generics, generics)
-						line = line.replace(generics + ' ', generics) 
 		return line
 
 	def pre_handle_string(self):
-		temp_init_content = "`".join(self.init_content)
+		temp_init_content = "→".join(self.init_content)
 		finded_multiline = re.findall(r'"""([^"]*)"""', temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
@@ -364,27 +432,27 @@ class Formatter:
 			for line in finded_line:
 				self.strings.append(line)
 				temp_init_content = temp_init_content.replace("\"" + line  + "\"", "~~~formatter_string~~~", 1)
-		self.init_content = temp_init_content.split("`")
+		self.init_content = temp_init_content.split("→")
 
 	def pre_handle_multiline_comment(self):
-
-		temp_init_content = "`".join(self.init_content)
+		temp_init_content = "→".join(self.init_content)
 		temp_init_content = re.sub(r"/\s*\*\s*\*", r"/**", temp_init_content)
 		temp_init_content = re.sub(r"\*\s+/", r"*/", temp_init_content)
 		finded_multiline = re.findall("/\\*.*?\\*/", temp_init_content)
 		if finded_multiline is not None:
 			for multiline in finded_multiline:
-				self.multi_coments.append(multiline)
-				temp_init_content = temp_init_content.replace("" + multiline  + "", "~~~formatter_multi_comment~~~", 1)
-		self.init_content = temp_init_content.split("`")
+				for sub_line in multiline.split("→"):
+					self.multi_coments.append(sub_line)
+					temp_init_content = temp_init_content.replace(sub_line, "~~~formatter_multi_comment~~~", 1)
+		self.init_content = temp_init_content.split("→")
 
 	def post_handle_string(self):
-		temp_init_content = "`".join(self.finished_content)
+		temp_init_content = "→".join(self.finished_content)
 
 		for i, indent in enumerate(self.strings_indent):
 			res_str = "\"\"\""
 			skip_first = 0
-			for multiline in self.multi_strings[i].split('`'):
+			for multiline in self.multi_strings[i].split('→'):
 				res_str += indent * self.indent_const * skip_first + multiline + "\n"
 				skip_first = 1
 			res_str = res_str[:-1]
@@ -392,14 +460,14 @@ class Formatter:
 			temp_init_content = temp_init_content.replace("~~~formatter_multi_string~~~", res_str, 1)
 		for str in self.strings:
 			temp_init_content = temp_init_content.replace("~~~formatter_string~~~", "\"" + str + "\"", 1)
-		self.finished_content = temp_init_content.split("`")
+		self.finished_content = temp_init_content.split("→")
 
 	def post_handle_multi_comment(self):
-		temp_init_content = "`".join(self.finished_content)
+		temp_init_content = "→".join(self.finished_content)
 
 		for comment in self.multi_coments:
 			temp_init_content = temp_init_content.replace("~~~formatter_multi_comment~~~", comment, 1)
-		self.finished_content = temp_init_content.split("`")
+		self.finished_content = temp_init_content.split("→")
 
 	
 	def post_lines(self):
@@ -417,9 +485,43 @@ class Formatter:
 			new_content.append(line)
 		self.finished_content = new_content
 
+	def pre_long_line(self):
+		new_content = []
+		bracket_stack = []
+		curr_line = ""
+		open_list = ["[","("]
+		close_list = ["]",")"]
+		for line in self.init_content:
+			curr_line = curr_line.strip() + line 
+			for j, letter in enumerate(line):
+				if letter in open_list:
+					bracket_stack.append(letter)
+				elif letter in close_list:
+					pos = close_list.index(letter)
+					if ((len(bracket_stack) > 0) and (open_list[pos] == bracket_stack[-1])): 
+						bracket_stack.pop()
+			if len(bracket_stack) == 0:
+				new_content.append(curr_line)
+				curr_line = ""
+		self.init_content = new_content
+
+	def pre_replace_bracets(self):
+		new_content = []
+		for line in self.init_content:
+			new_content.append(re.sub(r"{}", "~~~brackets~~~",line))
+		self.init_content = new_content
+
+	def post_replace_bracets(self):
+		new_finished_content = []
+		for line in self.finished_content:
+			new_finished_content.append(re.sub("~~~brackets~~~", "{}", line))
+		self.finished_content = new_finished_content
+
 	def format_file(self):
 		for i, line in enumerate(self.init_content):
 			self.init_content[i] = line.strip()
+		self.pre_replace_bracets()
+		self.pre_long_line()
 		self.pre_handle_string()
 		self.pre_handle_multiline_comment()
 		is_redundant_empty_line = False
@@ -475,6 +577,7 @@ class Formatter:
 		self.post_handle_string()
 		self.post_handle_multi_comment()
 		self.post_lines()
+		self.post_replace_bracets()
 
 	def print_finished_content(self):
 		for line in self.finished_content:
