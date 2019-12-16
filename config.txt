@@ -10,6 +10,6 @@ replace_multiple_spaces = True
 [lines]
 indent_const_value = 4
 max_line_length_const = 60	
-split_long_lines = False
+split_long_lines = True
 del_redundant_empty_lines = True
 format_curly_braces = True
